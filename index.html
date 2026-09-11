@@ -177,16 +177,17 @@
     countEl.textContent = `${words.length} word${words.length === 1 ? '' : 's'}`;
   }
 
-  async function save(){
-    try{
-      await window.storage.set(STORAGE_KEY, pad.value, false);
-      setStatus('saved');
-    }catch(e){
-      console.error('save failed', e);
-      setStatus('');
-    }
-    clearTimeout(fadeTimer);
-    fadeTimer = setTimeout(() => setStatus(''), 1800);
+  function save(){
+  	try{
+  		localStorage.setItem(STORAGE_KEY, pad.value);
+  		setStatus('saved');
+  	}catch(e){
+  		console.error('save failed', e);
+  		setStatus('');
+  	}
+  
+  	clearTimeout(fadeTimer);
+  	fadeTimer = setTimeout(() => setStatus(''), 1800);
   }
 
   function scheduleSave(){
@@ -221,18 +222,18 @@
       downloadPad();
     }
   });
-
-  (async () => {
-    try{
-      const result = await window.storage.get(STORAGE_KEY, false);
-      if (result && typeof result.value === 'string'){
-        pad.value = result.value;
-      }
-    }catch(e){
-      // nothing saved yet
-    }finally{
-      updateCount();
-    }
+  (() => {
+  	try{
+  		const value = localStorage.getItem(STORAGE_KEY);
+  
+  		if (typeof value === 'string'){
+  			pad.value = value;
+  		}
+  	}catch(e){
+  		console.error('load failed', e);
+  	}finally{
+  		updateCount();
+  	}
   })();
 </script>
 
