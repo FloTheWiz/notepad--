@@ -3,22 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scratchpad</title>
+<title>Notepad--</title>
+<script>
+  /* set the theme before first paint so there's no flash */
+  (function(){
+    var theme = 'light';
+    try{
+      var p = JSON.parse(localStorage.getItem('notepad-prefs') || '{}');
+      theme = p.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    }catch(e){}
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* #e4d2aa
-#c7b08b
-#a08662
-#796755
-#5a4e44
-#423934 */
-    --bg: #fff0f2;
+    /* earthy ramp: #e4d2aa #c7b08b #a08662 #796755 #5a4e44 #423934 */
+    --paper: #fdf2e7;
+    --chrome: #e8dbc9;
+    --ink: #2a211b;
+    --muted: #7d6b58;
     --accent: #a08662;
-    --text: #03090e;
-    --muted: #423934;
+    --accent-ink: #796755;
+    --line: rgba(66,57,52,0.22);
+    --hover: rgba(160,134,98,0.16);
+    --selection: rgba(206,168,84,0.42);
+    --danger: #a23b3b;
+
+    /* texture */
+    --rule: rgba(90,78,68,0.15);
+    --margin: rgba(168,84,72,0.3);
+    --shade: rgba(60,44,32,0.3);
+
+    --font: 'Inter', system-ui, sans-serif;
+    --size: 17px;
+    --lh: 1.7;
+    --pad-top: 22px;
+    --pad-x: clamp(18px, 4vw, 56px);
+
+    /* wobbly, hand-cut corners */
+    --cut: 10px 8px 12px 7px / 7px 12px 8px 10px;
+    --cut-sm: 8px 5px 9px 6px / 6px 9px 5px 8px;
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #2b231e;
+    --chrome: #1d1714;
+    --ink: #f0e5d3;
+    --muted: #b3a288;
+    --accent: #c7b08b;
+    --accent-ink: #d8c29c;
+    --line: rgba(228,210,170,0.18);
+    --hover: rgba(199,176,139,0.16);
+    --selection: rgba(199,176,139,0.32);
+    --danger: #e08a7e;
+
+    --rule: rgba(228,210,170,0.07);
+    --margin: rgba(224,138,126,0.22);
+    --shade: rgba(0,0,0,0.55);
+    color-scheme: dark;
   }
 
   *{ box-sizing: border-box; }
@@ -26,215 +72,1007 @@
   html, body{
     height: 100%;
     margin: 0;
-    background: var(--bg);
+    background: var(--chrome);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
-  .wrap{
-    max-width: 90vw;
+  /* paper grain, laid over the whole thing */
+  body::after{
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.35;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .app{
     height: 100vh;
-    margin: 0 auto;
-    padding: 6vh 24px 4vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
   }
 
+  /* ---------- top bar ---------- */
+
   .bar{
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding-bottom: 14px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(243,233,222,0.1);
-    transition: border-color 0.3s ease;
-  }
-
-  .wrap:focus-within .bar,
-  .wrap:focus-within .foot{
-    border-color: rgba(205,161,90,0.35);
-  }
-
-  .title{
-    margin: 0;
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 1.15rem;
-    color: var(--text);
-  }
-
-  .status{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    color: var(--accent);
-    opacity: 0;
-    min-width: 60px;
-    text-align: right;
-    transition: opacity 0.5s ease;
-  }
-
-  .pad{
-    flex: 1;
-    width: 100%;
-    background: transparent;
-    border: none;
-    outline: none;
-    resize: none;
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    font-size: 1.15rem;
-    line-height: 1.8;
-    caret-color: var(--accent);
-    padding: 0;
-  }
-
-  .pad::placeholder{
-    color: var(--muted);
-    font-style: italic;
-  }
-
-  .pad::selection{
-    background: rgba(205,161,90,0.28);
-    color: var(--text);
-  }
-
-  .foot{
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-top: 20px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(243,233,222,0.1);
-    transition: border-color 0.3s ease;
+    gap: 18px;
+    padding: 10px 14px 0 18px;
+    background: var(--chrome);
   }
 
-  .count{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    color: var(--muted);
+  .brand{
+    margin: 0;
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.2rem;
+    line-height: 1;
+    white-space: nowrap;
+    transform: rotate(-1.2deg);
+    text-decoration: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
   }
 
-  .download{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    color: var(--accent);
+  .actions{ display: flex; gap: 2px; }
+
+  .right{
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .btn{
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 11px;
+    border: 1.5px solid transparent;
+    border-radius: var(--cut-sm);
     background: none;
-    border: none;
-    border-bottom: 1px solid rgba(205,161,90,0.4);
-    padding: 2px 1px;
+    color: var(--ink);
+    font: 500 0.84rem 'Inter', system-ui, sans-serif;
     cursor: pointer;
-    transition: border-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   }
-
-  .download:hover{
-    border-color: var(--accent);
-    color: var(--text);
+  .btn:hover{
+    background: var(--hover);
+    border-color: var(--line);
+    transform: rotate(-0.7deg);
   }
+  .btn:active{ transform: rotate(0.4deg) translateY(1px); }
+  .btn svg{
+    width: 17px;
+    height: 17px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .btn.icon{ width: 34px; padding: 0; justify-content: center; }
+  .btn.hot{ color: var(--accent-ink); background: var(--hover); border-color: var(--line); }
+  .btn.solid{
+    background: var(--accent);
+    color: #241c18;
+    border-color: rgba(66,57,52,0.35);
+    box-shadow: 2px 2px 0 rgba(66,57,52,0.28);
+  }
+  .btn.solid:hover{ filter: brightness(1.07); }
 
-  .download:focus-visible,
-  .pad:focus-visible{
-    outline: 2px solid var(--accent);
+  .btn:focus-visible,
+  .chip:focus-visible,
+  .tab:focus-visible{
+    outline: 2px dashed var(--accent);
     outline-offset: 2px;
   }
 
-  @media (max-width: 520px){
-    .wrap{ padding: 4vh 18px 3vh; }
-    .pad{ font-size: 1.05rem; }
+  .status{
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    color: var(--accent-ink);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .status.show{ opacity: 1; }
+  .status.err{ color: var(--danger); }
+
+  .moon, .sun{ display: none; }
+  :root:not([data-theme="dark"]) .moon{ display: block; }
+  :root[data-theme="dark"] .sun{ display: block; }
+
+  /* ---------- tabs: torn scraps, the active one is the same sheet as the editor ---------- */
+
+  .tabs{
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    padding: 8px 14px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background-color: var(--chrome);
+    /* a dashed rule instead of a clean hairline */
+    background-image: linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px);
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 12px 1px;
+  }
+  .tabs::-webkit-scrollbar{ display: none; }
+
+  .tab{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 200px;
+    min-width: 96px;
+    height: 36px;
+    padding: 0 6px 0 14px;
+    border: 1.5px solid transparent;
+    border-bottom: 0;
+    border-radius: 11px 8px 0 0 / 13px 10px 0 0;
+    color: var(--muted);
+    font-size: 0.84rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+  }
+  .tab:nth-child(odd){ transform: rotate(-0.6deg); }
+  .tab:nth-child(even){ transform: rotate(0.5deg); }
+  .tab:hover{ background: var(--hover); }
+  .tab[aria-selected="true"]{
+    background: var(--paper);
+    color: var(--ink);
+    border-color: transparent;
+    transform: none;
+    box-shadow: inset 0 2px 0 var(--accent);
+  }
+  .tab .name{
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tab .mark{
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--cut-sm);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .tab .mark:hover{ background: var(--hover); }
+  .tab .mark svg{
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .tab .mark .dot{
+    display: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 60% 40% 55% 45%;
+    background: var(--accent);
+    transform: rotate(-12deg);
+  }
+  .tab.dirty .mark svg{ display: none; }
+  .tab.dirty .mark .dot{ display: block; }
+  .tab.dirty .mark:hover svg,
+  .tab.dirty .mark:focus-visible svg{ display: block; }
+  .tab.dirty .mark:hover .dot,
+  .tab.dirty .mark:focus-visible .dot{ display: none; }
+
+  .tabs .add{ flex: none; margin-bottom: 1px; color: var(--muted); }
+
+  /* ---------- editor ---------- */
+
+  .editors{
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    background: var(--paper);
+    box-shadow: inset 0 10px 12px -12px var(--shade);
+  }
+
+  /* the red margin rule down the left */
+  .editors::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--pad-x) - 12px);
+    width: 1px;
+    background: var(--margin);
+    pointer-events: none;
+  }
+
+  .pad{
+    /* line height in real pixels, so the rules under the text line up */
+    --line-h: calc(1em * var(--lh));
+
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: var(--pad-top) var(--pad-x) 48px;
+    border: 0;
+    outline: none;
+    resize: none;
+
+    /* ruled paper: scrolls with the text */
+    background-color: transparent;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--line-h) - 1px),
+      var(--rule) calc(var(--line-h) - 1px),
+      var(--rule) var(--line-h)
+    );
+    background-attachment: local;
+    background-position: 0 var(--pad-top);
+    background-repeat: repeat;
+
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: var(--size);
+    line-height: var(--lh);
+    caret-color: var(--accent);
+    tab-size: 2;
+  }
+  .pad[hidden]{ display: none; }
+  .pad::placeholder{
+    color: var(--muted);
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    opacity: 0.8;
+  }
+  .pad::selection{ background: var(--selection); color: inherit; }
+
+  /* ---------- status bar ---------- */
+
+  .foot{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 34px;
+    padding: 0 12px 0 18px;
+    background: var(--chrome);
+    border-top: 1px dashed var(--line);
+    color: var(--muted);
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .foot .grow{ flex: 1; }
+
+  .chip{
+    height: 24px;
+    padding: 0 8px;
+    border: 1.5px solid transparent;
+    border-radius: var(--cut-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .chip:hover{ background: var(--hover); border-color: var(--line); }
+  .chip[aria-pressed="true"]{ background: var(--hover); color: var(--ink); }
+  select.chip{ appearance: none; -webkit-appearance: none; }
+
+  /* ---------- unsaved-changes dialog ---------- */
+
+  dialog{
+    width: min(420px, 90vw);
+    padding: 22px 24px 18px;
+    border: 1.5px solid var(--line);
+    border-radius: 16px 12px 18px 11px / 12px 18px 11px 16px;
+    background: var(--paper);
+    color: var(--ink);
+    transform: rotate(-0.7deg);
+    box-shadow: 4px 6px 0 rgba(66,57,52,0.16), 0 18px 50px rgba(36,28,24,0.28);
+  }
+  dialog::backdrop{ background: rgba(36,28,24,0.45); }
+  dialog h2{
+    margin: 0 0 6px;
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 1.15rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  dialog p{
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  dialog .row{ display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+  /* ---------- drop target ---------- */
+
+  body.dragging::before{
+    content: 'Drop to open';
+    position: fixed;
+    inset: 14px;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    border: 3px dashed var(--accent);
+    border-radius: 20px 15px 22px 13px / 13px 22px 15px 20px;
+    background: var(--paper);
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    color: var(--accent-ink);
+    font: italic 500 1.5rem 'Fraunces', Georgia, serif;
+    transform: rotate(-0.6deg);
+    pointer-events: none;
+  }
+
+  /* ---------- small screens ---------- */
+
+  @media (max-width: 640px){
+    .bar{ gap: 8px; padding-left: 14px; }
+    .btn span{ display: none; }
+    .btn{ width: 34px; padding: 0; justify-content: center; }
+    .hide-sm{ display: none; }
+    .foot{ gap: 12px; padding-left: 14px; }
+    .pad{ font-size: max(var(--size), 16px); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; }
+    .brand, dialog, body.dragging::before{ transform: none; }
   }
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <div class="bar">
-    <h1 class="title">Notepad</h1>
-    <span class="status" id="status"></span>
+<div class="app">
+  <header class="bar">
+    <h1 class="brand">Notepad--</h1>
+
+    <div class="actions" role="toolbar" aria-label="File actions">
+      <button class="btn" id="btnOpen" type="button" aria-label="Open">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+        <span>Open</span>
+      </button>
+      <button class="btn" id="btnSave" type="button" aria-label="Save">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+        <span>Save</span>
+      </button>
+      <button class="btn" id="btnSaveAs" type="button" aria-label="Save as">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        <span>Save as</span>
+      </button>
+    </div>
+
+    <div class="right">
+      <span class="status" id="status" role="status" aria-live="polite"></span>
+      <button class="btn icon" id="btnTheme" type="button" aria-label="Switch light or dark theme" title="Switch light or dark theme">
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs" role="tablist" aria-label="Open files">
+    <button class="btn icon add" id="btnAdd" type="button" aria-label="New tab">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
   </div>
 
-  <textarea class="pad" id="pad" aria-label="Scratchpad content" placeholder="start writing…" spellcheck="false"></textarea>
+  <main class="editors" id="editors"></main>
 
-  <div class="foot">
-    <span class="count" id="count">0 words</span>
-    <button class="download" id="downloadBtn">Download</button>
-  </div>
+  <footer class="foot">
+    <span id="pos">Ln 1, Col 1</span>
+    <span id="words">0 words</span>
+    <span id="chars" class="hide-sm">0 characters</span>
+    <span class="grow"></span>
+    <button class="chip" id="btnWrap" type="button" aria-pressed="true" title="Word wrap">Wrap</button>
+    <select class="chip hide-sm" id="fontSel" aria-label="Font">
+      <option value="sans">Sans</option>
+      <option value="serif">Serif</option>
+      <option value="mono">Mono</option>
+    </select>
+    <span>
+      <button class="chip" id="btnSmaller" type="button" aria-label="Smaller text" title="Smaller text">A−</button><button class="chip" id="btnLarger" type="button" aria-label="Larger text" title="Larger text">A+</button>
+    </span>
+    <span id="eol" class="hide-sm">LF</span>
+    <span class="hide-sm">UTF-8</span>
+  </footer>
 </div>
 
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <form method="dialog">
+    <h2 id="dlgTitle"></h2>
+    <p>Your changes will be lost if you don’t save them.</p>
+    <div class="row">
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn" value="discard">Don’t save</button>
+      <button class="btn solid" value="save" autofocus>Save</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="fileInput" multiple hidden>
+
 <script>
-  const pad = document.getElementById('pad');
-  const statusEl = document.getElementById('status');
-  const countEl = document.getElementById('count');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const STORAGE_KEY = 'scratchpad-content';
+(() => {
+  'use strict';
 
-  let saveTimer = null;
-  let fadeTimer = null;
+  const $ = (sel) => document.querySelector(sel);
+  const tabsEl   = $('#tabs');
+  const addBtn   = $('#btnAdd');
+  const editors  = $('#editors');
+  const statusEl = $('#status');
+  const posEl    = $('#pos');
+  const wordsEl  = $('#words');
+  const charsEl  = $('#chars');
+  const eolEl    = $('#eol');
+  const saveBtn  = $('#btnSave');
+  const fontSel  = $('#fontSel');
+  const dlg      = $('#dlg');
+  const dlgTitle = $('#dlgTitle');
+  const fileInput = $('#fileInput');
 
-  function setStatus(text){
-    statusEl.textContent = text;
-    statusEl.style.opacity = text ? '1' : '0';
+  const PREFS_KEY   = 'notepad-prefs';
+  const SESSION_KEY = 'notepad-session';
+  const LEGACY_KEY  = 'scratchpad-content';   // where the old single-pad version kept its text
+  const MAX_BYTES   = 10 * 1024 * 1024;
+
+  // Chrome / Edge / ChromeOS can read and write real files; others fall back to open-by-input and download
+  const HAS_FSA = 'showOpenFilePicker' in window && 'showSaveFilePicker' in window;
+  const IS_MAC  = /Mac|iPhone|iPad/.test(navigator.platform);
+  const MOD = IS_MAC ? '⌘' : 'Ctrl';
+  const ALT = IS_MAC ? '⌥' : 'Alt';
+
+  const FONTS = {
+    sans:  { stack: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif", lh: 1.7 },
+    serif: { stack: "'Fraunces', Georgia, 'Times New Roman', serif", lh: 1.75 },
+    mono:  { stack: "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace", lh: 1.6 },
+  };
+
+  /* ---------- preferences ---------- */
+
+  let prefs = { theme: null, wrap: true, font: 'sans', size: 17 };
+  try{ prefs = { ...prefs, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; }catch(e){}
+  const savePrefs = () => { try{ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }catch(e){} };
+
+  function applyPrefs(){
+    const font = FONTS[prefs.font] || FONTS.sans;
+    const root = document.documentElement.style;
+    root.setProperty('--font', font.stack);
+    root.setProperty('--lh', font.lh);
+    root.setProperty('--size', prefs.size + 'px');
+    for (const t of tabs) t.el.wrap = prefs.wrap ? 'soft' : 'off';
+    $('#btnWrap').setAttribute('aria-pressed', String(prefs.wrap));
+    fontSel.value = FONTS[prefs.font] ? prefs.font : 'sans';
   }
 
-  function updateCount(){
-    const words = pad.value.trim().split(/\s+/).filter(Boolean);
-    countEl.textContent = `${words.length} word${words.length === 1 ? '' : 's'}`;
+  /* ---------- tabs ---------- */
+
+  let tabs = [];
+  let activeId = null;
+  let seq = 0;
+
+  const active  = () => tabs.find((t) => t.id === activeId);
+  const isDirty = (t) => t.text !== t.saved;
+  const isPristine = (t) => !t.handle && t.text === '' && t.saved === '';
+
+  function untitledName(){
+    const names = new Set(tabs.map((t) => t.name));
+    if (!names.has('Untitled')) return 'Untitled';
+    let n = 2;
+    while (names.has('Untitled ' + n)) n++;
+    return 'Untitled ' + n;
   }
 
-  function save(){
-  	try{
-  		localStorage.setItem(STORAGE_KEY, pad.value);
-  		setStatus('saved');
-  	}catch(e){
-  		console.error('save failed', e);
-  		setStatus('');
-  	}
-  
-  	clearTimeout(fadeTimer);
-  	fadeTimer = setTimeout(() => setStatus(''), 1800);
+  function createTab({ name, text = '', saved = null, handle = null, eol = '\n' } = {}){
+    const el = document.createElement('textarea');
+    el.className = 'pad';
+    el.spellcheck = false;
+    el.setAttribute('autocapitalize', 'off');
+    el.setAttribute('autocomplete', 'off');
+    el.setAttribute('aria-label', 'Editor');
+    el.placeholder = `Start typing, or press ${MOD}+O to open a file`;
+    el.wrap = prefs.wrap ? 'soft' : 'off';
+    el.hidden = true;
+    el.value = text;                       // the browser normalises line endings here
+    editors.appendChild(el);
+
+    const tabEl = document.createElement('div');
+    tabEl.className = 'tab';
+    tabEl.setAttribute('role', 'tab');
+    tabEl.tabIndex = -1;
+    tabEl.innerHTML =
+      '<span class="name"></span>' +
+      '<button class="mark" type="button" tabindex="-1">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+        '<span class="dot" aria-hidden="true"></span>' +
+      '</button>';
+    tabsEl.insertBefore(tabEl, addBtn);
+
+    const t = {
+      id: ++seq,
+      name: name || untitledName(),
+      text: el.value,
+      saved: saved === null ? el.value : saved,
+      handle, eol, el, tabEl, scroll: 0,
+    };
+    tabs.push(t);
+    syncTab(t);
+    return t;
   }
 
-  function scheduleSave(){
-    setStatus('saving…');
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(save, 700);
+  function syncTab(t){
+    const dirty = isDirty(t);
+    const selected = t.id === activeId;
+    t.tabEl.classList.toggle('dirty', dirty);
+    t.tabEl.setAttribute('aria-selected', String(selected));
+    t.tabEl.tabIndex = selected ? 0 : -1;
+    t.tabEl.title = t.name + (dirty ? ' (unsaved)' : '');
+    const nameEl = t.tabEl.firstChild;
+    if (nameEl.textContent !== t.name) nameEl.textContent = t.name;
+    t.tabEl.querySelector('.mark').setAttribute('aria-label', 'Close ' + t.name);
   }
 
-  pad.addEventListener('input', () => {
-    updateCount();
-    scheduleSave();
+  function activate(id, { focus = true } = {}){
+    const prev = active();
+    if (prev) prev.scroll = prev.el.scrollTop;
+    activeId = id;
+    const t = active();
+    if (!t) return;
+    for (const x of tabs){ x.el.hidden = x !== t; syncTab(x); }
+    t.el.scrollTop = t.scroll || 0;
+    if (focus) t.el.focus({ preventScroll: true });
+    t.tabEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    refreshChrome();
+    persistSoon();
+  }
+
+  function newTab(opts){
+    const t = createTab(opts);
+    activate(t.id);
+    return t;
+  }
+
+  function removeTab(t){
+    const idx = tabs.indexOf(t);
+    if (idx < 0) return;
+    tabs.splice(idx, 1);
+    t.el.remove();
+    t.tabEl.remove();
+    if (!tabs.length){ newTab(); return; }
+    if (activeId === t.id) activate(tabs[Math.min(idx, tabs.length - 1)].id);
+    else persistSoon();
+  }
+
+  async function closeTab(id){
+    const t = tabs.find((x) => x.id === id);
+    if (!t) return;
+    if (isDirty(t)){
+      activate(id, { focus: false });
+      const choice = await askUnsaved(t);
+      if (choice === 'cancel'){ const a = active(); if (a) a.el.focus(); return; }
+      if (choice === 'save' && !(await save(t))) return;
+    }
+    removeTab(t);
+  }
+
+  function askUnsaved(t){
+    return new Promise((resolve) => {
+      dlgTitle.textContent = `Save changes to “${t.name}”?`;
+      dlg.returnValue = '';
+      dlg.addEventListener('close', () => resolve(dlg.returnValue || 'cancel'), { once: true });
+      dlg.showModal();
+    });
+  }
+
+  /* ---------- status + chrome ---------- */
+
+  let statusQueued = false;
+  function scheduleStatus(){
+    if (statusQueued) return;
+    statusQueued = true;
+    requestAnimationFrame(() => { statusQueued = false; updateStatus(); });
+  }
+
+  function updateStatus(){
+    const t = active();
+    if (!t) return;
+    const v = t.el.value;
+    const s = t.el.selectionStart;
+    const e = t.el.selectionEnd;
+
+    let line = 1;
+    let i = v.indexOf('\n');
+    while (i !== -1 && i < s){ line++; i = v.indexOf('\n', i + 1); }
+    const col = s - (s === 0 ? -1 : v.lastIndexOf('\n', s - 1));
+    const picked = e - s;
+    posEl.textContent = `Ln ${line}, Col ${col}` + (picked ? ` (${picked.toLocaleString()} selected)` : '');
+
+    const words = (v.match(/\S+/g) || []).length;
+    wordsEl.textContent = `${words.toLocaleString()} word${words === 1 ? '' : 's'}`;
+    charsEl.textContent = `${v.length.toLocaleString()} character${v.length === 1 ? '' : 's'}`;
+  }
+
+  function refreshChrome(){
+    const t = active();
+    if (!t) return;
+    const dirty = isDirty(t);
+    document.title = `${dirty ? '● ' : ''}${t.name} – Notepad--`;
+    saveBtn.classList.toggle('hot', dirty);
+    eolEl.textContent = t.eol === '\r\n' ? 'CRLF' : 'LF';
+    scheduleStatus();
+  }
+
+  let toastTimer = null;
+  function toast(msg, isError = false){
+    statusEl.textContent = msg;
+    statusEl.classList.toggle('err', isError);
+    statusEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => statusEl.classList.remove('show'), isError ? 5000 : 2200);
+  }
+
+  /* ---------- editing ---------- */
+
+  editors.addEventListener('input', (e) => {
+    const t = tabs.find((x) => x.el === e.target);
+    if (!t) return;
+    t.text = t.el.value;
+    syncTab(t);
+    refreshChrome();
+    persistSoon();
   });
 
-  function downloadPad(){
-    const blob = new Blob([pad.value], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `scratchpad-${stamp}.txt`;
+  for (const ev of ['keydown', 'keyup', 'mouseup', 'focusin', 'select']){
+    editors.addEventListener(ev, scheduleStatus);
+  }
+
+  // replaces a range through the browser's own edit path, so undo/redo keep working
+  function replaceRange(el, start, end, text){
+    el.focus();
+    el.setSelectionRange(start, end);
+    const ok = typeof document.execCommand === 'function' && document.execCommand('insertText', false, text);
+    if (!ok){
+      el.setRangeText(text, start, end, 'end');
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  const lineStart = (v, i) => (i === 0 ? 0 : v.lastIndexOf('\n', i - 1) + 1);
+
+  function indent(el, outdent){
+    const v = el.value, s = el.selectionStart, e = el.selectionEnd;
+    const unit = /^\t/m.test(v) ? '\t' : '  ';     // follow the file: tabs if it uses them, else two spaces
+
+    if (s === e && !outdent){ replaceRange(el, s, e, unit); return; }
+
+    const ls = lineStart(v, s);
+    const endAt = (e > s && v[e - 1] === '\n') ? e - 1 : e;   // a selection ending at column 0 doesn't include that line
+    let le = v.indexOf('\n', endAt);
+    if (le === -1) le = v.length;
+
+    const deltas = [];
+    const next = v.slice(ls, le).split('\n').map((line) => {
+      if (!outdent){
+        if (!line){ deltas.push(0); return line; }
+        deltas.push(unit.length);
+        return unit + line;
+      }
+      const cut = line[0] === '\t' ? 1 : (line.match(/^ {1,2}/) || [''])[0].length;
+      deltas.push(-cut);
+      return line.slice(cut);
+    }).join('\n');
+
+    if (next === v.slice(ls, le)) return;
+    const total = deltas.reduce((a, b) => a + b, 0);
+    replaceRange(el, ls, le, next);
+    const ns = Math.max(ls, s + (s === ls ? 0 : deltas[0]));
+    el.setSelectionRange(ns, Math.max(ns, e + total));
+  }
+
+  // Tab indents. Press Esc first if you want Tab to move focus out of the editor instead.
+  let escaped = false;
+  editors.addEventListener('keydown', (e) => {
+    if (e.target.tagName !== 'TEXTAREA') return;
+    if (e.key === 'Escape'){ escaped = true; return; }
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey){
+      if (escaped){ escaped = false; return; }
+      e.preventDefault();
+      indent(e.target, e.shiftKey);
+      return;
+    }
+    escaped = false;
+  });
+
+  /* ---------- files ---------- */
+
+  const withExt = (name) => (/\.[^./\\\s]+$/.test(name) ? name : name + '.txt');
+  const encode = (text, eol) => (eol === '\r\n' ? text.replace(/\n/g, '\r\n') : text);
+
+  async function writeHandle(handle, data){
+    const w = await handle.createWritable();
+    try{
+      await w.write(data);
+      await w.close();
+    }catch(err){
+      try{ await w.abort(); }catch(e){}
+      throw err;
+    }
+  }
+
+  function download(name, data){
+    const url = URL.createObjectURL(new Blob([data], { type: 'text/plain;charset=utf-8' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: name });
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  downloadBtn.addEventListener('click', downloadPad);
+  // returns true once the file is written (or downloaded), false if cancelled or failed
+  async function save(t = active(), saveAs = false){
+    if (!t) return false;
+    const text = t.text;                         // snapshot, in case typing continues during the write
+    const data = encode(text, t.eol);
+    try{
+      if (HAS_FSA){
+        let handle = saveAs ? null : t.handle;
+        if (!handle) handle = await showSaveFilePicker({ suggestedName: withExt(t.name) });
+        await writeHandle(handle, data);
+        t.handle = handle;
+        t.name = handle.name;
+      }else{
+        let name = withExt(t.name);
+        if (saveAs){
+          const answer = prompt('Save as', name);
+          if (!answer) return false;
+          name = answer.trim() || name;
+        }
+        download(name, data);
+        t.name = name;
+      }
+      t.saved = text;
+      syncTab(t);
+      if (t === active()) refreshChrome();
+      persistSoon();
+      toast(HAS_FSA ? `Saved ${t.name}` : `Downloaded ${t.name}`);
+      return true;
+    }catch(err){
+      if (err && err.name === 'AbortError') return false;           // picker was cancelled
+      if (err && err.name === 'NotFoundError' && t.handle && !saveAs){
+        t.handle = null;                                              // file was moved or deleted: pick a new spot
+        return save(t, true);
+      }
+      toast(`Couldn’t save ${t.name}: ${(err && err.message) || err}`, true);
+      return false;
+    }
+  }
 
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
-      e.preventDefault();
-      downloadPad();
+  async function openPicker(){
+    if (!HAS_FSA){ fileInput.click(); return; }
+    try{
+      const handles = await showOpenFilePicker({ multiple: true });
+      for (const h of handles) await openHandle(h);
+    }catch(err){
+      if (!err || err.name !== 'AbortError') toast(`Couldn’t open: ${(err && err.message) || err}`, true);
+    }
+  }
+
+  async function openHandle(handle){
+    for (const t of tabs){
+      if (t.handle && await t.handle.isSameEntry(handle)){ activate(t.id); return; }
+    }
+    await openFile(await handle.getFile(), handle);
+  }
+
+  async function openFile(file, handle = null){
+    if (file.size > MAX_BYTES){ toast(`${file.name} is over 10 MB, too big to open here`, true); return; }
+    let raw;
+    try{ raw = await file.text(); }
+    catch(err){ toast(`Couldn’t read ${file.name}`, true); return; }
+    if (raw.includes('\u0000')){ toast(`${file.name} isn’t a plain-text file`, true); return; }
+
+    const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+    const blank = tabs.length === 1 && isPristine(tabs[0]) ? tabs[0] : null;   // don't leave an empty Untitled behind
+    const t = createTab({ name: file.name, text: raw, handle, eol });
+    if (blank) removeTab(blank);
+    activate(t.id);
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    for (const f of files) await openFile(f);
+  });
+
+  /* drag files onto the window */
+  const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  window.addEventListener('dragover', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    document.body.classList.add('dragging');
+  });
+  window.addEventListener('dragleave', (e) => {
+    if (!e.relatedTarget) document.body.classList.remove('dragging');
+  });
+  window.addEventListener('drop', async (e) => {
+    document.body.classList.remove('dragging');
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    // collect everything synchronously: the event's data is gone after the first await
+    const entries = [...e.dataTransfer.items]
+      .filter((i) => i.kind === 'file')
+      .map((i) => ({
+        file: i.getAsFile(),
+        handle: i.getAsFileSystemHandle ? i.getAsFileSystemHandle() : null,
+      }));
+    for (const { file, handle } of entries){
+      let h = null;
+      try{ h = handle ? await handle : null; }catch(err){}
+      if (h && h.kind === 'file') await openHandle(h);
+      else if (!h && file) await openFile(file);
     }
   });
-  (() => {
-  	try{
-  		const value = localStorage.getItem(STORAGE_KEY);
-  
-  		if (typeof value === 'string'){
-  			pad.value = value;
-  		}
-  	}catch(e){
-  		console.error('load failed', e);
-  	}finally{
-  		updateCount();
-  	}
-  })();
+
+  /* ---------- keeping drafts between visits ---------- */
+
+  let persistTimer = null;
+  let storageOk = true;
+  let warned = false;
+
+  function persistSoon(){
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(persist, 600);
+  }
+
+  function persist(){
+    clearTimeout(persistTimer);
+    try{
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        active: tabs.indexOf(active()),
+        tabs: tabs.map((t) => ({
+          name: t.name,
+          text: t.text,
+          saved: t.saved === t.text ? null : t.saved,
+          eol: t.eol,
+        })),
+      }));
+      storageOk = true;
+    }catch(err){
+      storageOk = false;
+      if (!warned){ warned = true; toast('Drafts can’t be kept between visits: browser storage is full. Save your files.', true); }
+    }
+  }
+
+  function restore(){
+    let data = null;
+    try{ data = JSON.parse(localStorage.getItem(SESSION_KEY)); }catch(e){}
+    const focus = matchMedia('(pointer: fine)').matches;   // don't pop the keyboard open on touch screens
+
+    if (data && Array.isArray(data.tabs) && data.tabs.length){
+      for (const s of data.tabs){
+        createTab({
+          name: typeof s.name === 'string' ? s.name : undefined,
+          text: typeof s.text === 'string' ? s.text : '',
+          saved: typeof s.saved === 'string' ? s.saved : null,
+          eol: s.eol === '\r\n' ? '\r\n' : '\n',
+        });
+      }
+      const i = Math.min(Math.max(data.active | 0, 0), tabs.length - 1);
+      activate(tabs[i].id, { focus });
+      return;
+    }
+
+    let legacy = '';
+    try{ legacy = localStorage.getItem(LEGACY_KEY) || ''; }catch(e){}
+    const t = createTab(legacy ? { text: legacy, saved: '' } : {});
+    activate(t.id, { focus });
+  }
+
+  window.addEventListener('pagehide', persist);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
+  window.addEventListener('beforeunload', (e) => {
+    if (!storageOk && tabs.some(isDirty)){ e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ---------- wiring ---------- */
+
+  tabsEl.addEventListener('click', (e) => {
+    const tabEl = e.target.closest('.tab');
+    if (!tabEl) return;
+    const t = tabs.find((x) => x.tabEl === tabEl);
+    if (!t) return;
+    if (e.target.closest('.mark')) closeTab(t.id);
+    else activate(t.id);
+  });
+  tabsEl.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+  tabsEl.addEventListener('auxclick', (e) => {
+    if (e.button !== 1) return;
+    const tabEl = e.target.closest('.tab');
+    const t = tabEl && tabs.find((x) => x.tabEl === tabEl);
+    if (t) closeTab(t.id);
+  });
+  tabsEl.addEventListener('keydown', (e) => {
+    const i = tabs.findIndex((t) => t.tabEl === document.activeElement);
+    if (i < 0) return;
+    let n = -1;
+    if (e.key === 'ArrowRight') n = (i + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = tabs.length - 1;
+    else if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(tabs[i].id); return; }
+    if (n < 0) return;
+    e.preventDefault();
+    activate(tabs[n].id, { focus: false });
+    tabs[n].tabEl.focus();
+  });
+
+  addBtn.addEventListener('click', () => newTab());
+  $('#btnOpen').addEventListener('click', openPicker);
+  saveBtn.addEventListener('click', () => save());
+  $('#btnSaveAs').addEventListener('click', () => save(active(), true));
+
+  $('#btnTheme').addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    prefs.theme = next;
+    savePrefs();
+  });
+  $('#btnWrap').addEventListener('click', () => { prefs.wrap = !prefs.wrap; applyPrefs(); savePrefs(); });
+  fontSel.addEventListener('change', () => { prefs.font = fontSel.value; applyPrefs(); savePrefs(); });
+  const setSize = (n) => { prefs.size = Math.min(32, Math.max(11, n)); applyPrefs(); savePrefs(); };
+  $('#btnSmaller').addEventListener('click', () => setSize(prefs.size - 1));
+  $('#btnLarger').addEventListener('click', () => setSize(prefs.size + 1));
+
+  $('#btnOpen').title   = `Open files (${MOD}+O)`;
+  saveBtn.title         = `Save (${MOD}+S)`;
+  $('#btnSaveAs').title = `Save as (${MOD}+Shift+S)`;
+  addBtn.title          = `New tab (${ALT}+N)`;
+
+  document.addEventListener('keydown', (e) => {
+    if (dlg.open) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    if (mod && !e.altKey && key === 's'){ e.preventDefault(); save(active(), e.shiftKey); }
+    else if (mod && !e.altKey && !e.shiftKey && key === 'o'){ e.preventDefault(); openPicker(); }
+    // browsers keep Ctrl+N / Ctrl+W for themselves, so tab shortcuts use Alt
+    else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyN'){ e.preventDefault(); newTab(); }
+    else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyW'){ e.preventDefault(); closeTab(activeId); }
+  });
+
+  applyPrefs();
+  restore();
+})();
 </script>
 
 </body>
