@@ -512,9 +512,10 @@
 :root[data-theme="beaten"] .editors::before{ box-shadow:3px 0 0 var(--margin); }
 /* spiral binding */
 :root[data-theme="beaten"] .editors::after{
-  content:''; position:absolute; inset:0 0 auto 0; height:36px; z-index:2; pointer-events:none;
+  content:''; position:absolute; inset:0 0 auto 0; height:40px; z-index:2; pointer-events:none;
+  top:-10px;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='36'%3E%3Cellipse cx='13' cy='19' rx='6' ry='5' fill='rgb(24,18,14)'/%3E%3Cpath d='M5 10C12 3 20 8 21 19S18 31 12 31' fill='none' stroke='rgb(120,116,110)' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M5 10C12 3 20 8 21 19' fill='none' stroke='rgb(236,232,224)' stroke-width='1' stroke-linecap='round' transform='translate(-.6 -.8)'/%3E%3C/svg%3E") repeat-x 14px 0/26px 36px,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='40'%3E%3Cellipse cx='13' cy='30' rx='5' ry='5' fill='rgb(24,18,14)'/%3E%3Cpath d='M5 10C12 3 20 8 21 19S18 31 12 31' fill='none' stroke='rgb(120,116,110)' stroke-width='3.2' stroke-linecap='round'/%3E%3Cpath d='M5 10C12 3 20 8 21 12' fill='none' stroke='rgb(236,232,224)' stroke-width='1' stroke-linecap='round' transform='translate(-1,-1)'/%3E%3C/svg%3E") repeat-x 14px 0/26px 36px,
     linear-gradient(rgba(0,0,0,.28),transparent);
 }
 :root[data-theme="beaten"] .pad{ text-shadow:.4px .3px 0 rgba(43,38,32,.35); scrollbar-color:#8a7550 transparent; }
